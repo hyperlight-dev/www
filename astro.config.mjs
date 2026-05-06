@@ -8,6 +8,7 @@ export default defineConfig({
 	integrations: [
 		starlight({
 			title: 'Hyperlight',
+			favicon: '/favicon.png',
 			components: {
 				Footer: './src/components/HyperlightFooter.astro'
 			},
