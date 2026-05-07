@@ -1,0 +1,46 @@
+---
+title: Hyperlight JavaScript
+description: Execute JavaScript within the Hyperlight secure boundary with single digit millisecond cold starts.
+---
+
+Hyperlight JavaScript is a runtime for executing JavaScript within the Hyperlight secure boundary. It provides the ability to cold
+start JS applications in single digit milliseconds, perfect for the basis of a functions runtime. The runtime also
+provides the ability to register host functions which allow for extending functionality of the guest JavaScript
+code executing within the hypervisor-protected boundary.
+
+```rust
+use hyperlight_js::{SandboxBuilder, Script};
+
+fn main() -> anyhow::Result<()> {
+    // Create a sandbox and load the JS runtime
+    let proto = SandboxBuilder::new().build()?;
+    let mut js_sandbox = proto.load_runtime()?;
+
+    // Register a JavaScript handler inline
+    let handler = Script::from_string(r#"
+        function fibonacci(n) {
+            if (n <= 0) return 0;
+            if (n === 1) return 1;
+            return fibonacci(n - 1) + fibonacci(n - 2);
+        }
+
+        function handler({ n }) {
+            return { fib: fibonacci(n) };
+        }
+
+        export { handler };
+    "#)?;
+    js_sandbox.add_handler("fibonacci".to_string(), handler)?;
+
+    // Load the sandbox and invoke the handler with a JSON event
+    let mut loaded = js_sandbox.get_loaded_sandbox()?;
+    let result = loaded.handle_event(
+        "fibonacci".to_string(),
+        r#"{ "n": 10 }"#.to_string(),
+        None,
+    )?;
+    println!("{result}"); // {"fib":55}
+
+    Ok(())
+}
+```

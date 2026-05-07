@@ -1,0 +1,35 @@
+---
+title: Hyperlight Sandbox
+description: A multi-backend sandboxing framework for running untrusted code with controlled host capabilities.
+---
+
+import { LinkButton } from '@astrojs/starlight/components';
+
+Hyperlight Sandbox is a multi-backend sandboxing framework for running untrusted code with controlled host capabilities.
+It provides a unified API across multiple isolation backends (Wasm Component, HyperlightJS, Nanvix) with a common
+capability model and SDKs for Python, .NET, and Rust.
+
+Key features include:
+
+- **Secure code execution** — Run untrusted code in hardware-isolated sandboxes (KVM, MSHV, Hyper-V)
+- **Host tool dispatch** — Register callables as tools; guest code invokes them by name with schema-validated arguments
+- **Capability-based file access** — Read-only `/input` directory, writable `/output` directory, strict path isolation
+- **Snapshot / restore** — Capture and rewind sandbox runtime state for reuse
+- **Network allow listing** — Network traffic is off by default; allow specific domains and HTTP verbs
+
+```python
+from hyperlight_sandbox import Sandbox
+
+sandbox = Sandbox(backend="wasm", module="python_guest.path")
+sandbox.register_tool("add", lambda a=0, b=0: a + b)
+sandbox.allow_domain("https://httpbin.org")
+
+result = sandbox.run("""
+total = call_tool('add', a=3, b=4)
+resp = http_get('https://httpbin.org/get')
+print(f"3 + 4 = {total}, HTTP status: {resp['status']}")
+""")
+print(result.stdout)
+```
+
+<LinkButton href="https://github.com/hyperlight-dev/hyperlight-sandbox">GitHub</LinkButton>

@@ -21,7 +21,14 @@ export default defineConfig({
 					],
 				},
 				{
-					label: 'Resources', autogenerate: {directory: 'resources'}
+					label: 'Resources',
+					items: [
+						{ slug: 'resources/community' },
+					],
+				},
+				{
+					label: 'Projects',
+					autogenerate: { directory: 'resources/projects' },
 				},
 			],
 			plugins: [starlightBlog({})],
