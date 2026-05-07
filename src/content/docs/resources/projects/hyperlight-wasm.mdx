@@ -1,0 +1,31 @@
+---
+title: Hyperlight Wasm
+description: Run Wasm modules within Hyperlight's secure boundary using Wasmtime.
+---
+
+import { LinkButton } from '@astrojs/starlight/components';
+
+Hyperlight Wasm enables Wasm modules to be run within the Hyperlight secure boundary using
+Wasmtime. Its purpose is to enable applications to run untrusted or third party Wasm code within the VM
+isolation boundary with very low latency and resource utilization.
+
+```rust
+// Load and call the component from your host application
+let mut sb = hyperlight_wasm::SandboxBuilder::new().build().unwrap();
+let rt = bindings::register_host_functions(&mut sb, state);
+
+let sb = sb.load_runtime().unwrap();
+let sb = sb.load_module("component_sample.aot").unwrap();
+
+let mut wrapped = bindings::ExampleSandbox { sb, rt };
+let instance = bindings::component_sample::example::ExampleExports::adder(&mut wrapped);
+
+let result = instance.add(1, 2);
+println!("1 + 2 = {result}"); // 1 + 2 = 3
+
+let result = instance.call_host("Hello".to_string());
+println!("{result}"); // Hello from component and the host!
+```
+
+<LinkButton href="https://github.com/hyperlight-dev/hyperlight-wasm">GitHub</LinkButton>
+<LinkButton href="https://docs.rs/crate/hyperlight-wasm/latest" variant="secondary">API Docs</LinkButton>
