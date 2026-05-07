@@ -1,0 +1,32 @@
+---
+title: HyperAgent
+description: A sandboxed code-acting AI agent runtime built on Hyperlight micro-VMs.
+---
+
+import { Aside, LinkButton } from '@astrojs/starlight/components';
+
+<Aside type="caution">HyperAgent is pre-release software. Not for production use.</Aside>
+
+HyperAgent is a sandboxed code-acting AI agent runtime: it writes JavaScript handlers, validates them, and runs them
+inside hardware-isolated Hyperlight micro-VMs using the [GitHub Copilot SDK](https://github.com/github/copilot-sdk).
+
+It is built for useful, bounded work: data analysis, document generation, API workflows, secure file output, and tool
+use through plugins and MCP servers. The model can write code, but the code runs in a sandbox with no direct
+filesystem, shell, or network access unless you explicitly enable narrowly scoped host capabilities.
+
+```bash
+hyperagent --skill pptx-expert --profile web-research \
+  --prompt "Create a presentation on the NASA Artemis II mission \
+  include lots of statistics and data, use an appropriate theme \
+  and color scheme for the subject, make it stunning"
+```
+
+| Instead of                | HyperAgent gives you                                          |
+| ------------------------- | ------------------------------------------------------------- |
+| Shell-first automation    | Code-first handlers validated and run in a micro-VM           |
+| Ambient filesystem access | Path-jailed read/write plugins                                |
+| Ambient network access    | Domain-scoped fetch with SSRF checks                          |
+| Ad hoc tool calls         | Normal JavaScript APIs for approved capabilities              |
+| Hidden agent state        | Explicit shared state, transcript logs, and timing logs       |
+
+<LinkButton href="https://github.com/hyperlight-dev/hyperagent">GitHub</LinkButton>
