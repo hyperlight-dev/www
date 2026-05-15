@@ -1,15 +1,19 @@
 ---
 title: Cargo Hyperlight
-description: A cargo subcommand to simplify building Hyperlight guest binaries.
+description: A cargo subcommand to build Hyperlight guest binaries.
 ---
 
 import { LinkButton } from '@astrojs/starlight/components';
 
-Cargo Hyperlight is a `cargo` subcommand to help with building Hyperlight guest binaries.
+Cargo Hyperlight is a `cargo` subcommand for building [Hyperlight](https://github.com/hyperlight-dev/hyperlight)
+guest binaries.
 
-Hyperlight's extremely limited guest API can make it challenging to build guests targeting the environment. `cargo-hyperlight`
-was created to make it easier to build guest binaries. In fact, if your bin or any of its dependencies have a `build.rs`
-script using `cc` and `bindgen` to compile C code and generate bindings, they will often work without change!
+Write a Hyperlight guest binary in Rust and build it with `cargo hyperlight build`; no extra build configuration is
+needed. If your binary or any dependency has a `build.rs` script using `cc` and `bindgen` to compile C code and generate
+bindings, it will often work out of the box.
+
+Your crate must have `hyperlight-guest-bin` as a transitive dependency. The command builds for the
+`x86_64-hyperlight-none` target by default and places the resulting guest binary under `target/x86_64-hyperlight-none/`.
 
 ```bash
 # Install
