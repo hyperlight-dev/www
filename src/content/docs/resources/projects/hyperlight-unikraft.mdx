@@ -1,0 +1,66 @@
+---
+title: Hyperlight Unikraft
+description: Run Unikraft unikernels and Linux applications on Hyperlight micro virtual machines.
+---
+
+import { LinkButton } from '@astrojs/starlight/components';
+
+Hyperlight Unikraft runs [Unikraft](https://unikraft.org/) unikernels on [Hyperlight](https://github.com/hyperlight-dev/hyperlight),
+enabling Linux applications written in Python, Node.js, Go, Rust, C, and C++ to execute inside hardware-isolated
+micro virtual machines.
+
+It provides a CLI host that loads a Unikraft kernel and optional initrd, passes application arguments into the guest,
+and captures console output through Hyperlight. The project also includes ready-to-use example configurations for
+building and running common application runtimes.
+
+Key features include:
+
+- **Unikernel execution** — Run Linux application binaries inside Unikraft guests on Hyperlight
+- **Thin, opt-in host surface** — Guests have no host filesystem, network, or host functions by default; `--mount`, `--net`, and `--enable-tools` opt in through a single `__dispatch` JSON-RPC bridge
+- **Broad language support** — Use examples for Python, Node.js, Go, Rust, C, C++, and more
+- **Generic command line** — Pass arguments to any application with `-- arg1 arg2 ...`
+- **Fast startup** — Use Hyperlight's lightweight VMM for low-latency micro virtual machine startup
+- **Host filesystem sandboxing** — Preopen host directories and expose them to guest applications with path isolation
+
+From commandline:
+
+```bash
+# Install pyhl
+cargo install --git https://github.com/hyperlight-dev/hyperlight-unikraft \
+    hyperlight-unikraft-host --bin pyhl
+
+pyhl setup --from examples/python-agent-driver
+pyhl run -c 'import pandas as pd; print(pd.DataFrame({"x":[1,2,3]}).sum().to_dict())'
+```
+
+As a library:
+
+```
+fn main() -> anyhow::Result<()> {
+    let code = std::env::args()
+        .nth(1)
+        .unwrap_or_else(|| r#"print("hello from the pyhl library API")"#.to_string());
+
+    let home = std::env::var("PYHL_HOME")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|_| Path::new(".pyhl").to_path_buf());
+
+    // Default: no mounts. Add `Preopen::new(host, guest)` entries to
+    // expose host directories via the guest's hostfs.
+    let mounts: &[Preopen] = &[];
+
+    let mut rt = pyhl::Runtime::new(&home, mounts, None, None)?;
+
+    eprintln!("-- first run (hermetic from loaded snapshot) --");
+    let t1 = rt.run_code(&code)?;
+    eprintln!("restore={:.1}ms call={:.1}ms", t1.restore_ms, t1.call_ms);
+
+    eprintln!("-- second run (restores to the same snapshot) --");
+    let t2 = rt.run_code(&code)?;
+    eprintln!("restore={:.1}ms call={:.1}ms", t2.restore_ms, t2.call_ms);
+
+    Ok(())
+}
+```
+
+<LinkButton href="https://github.com/hyperlight-dev/hyperlight-unikraft?tab=readme-ov-file">GitHub</LinkButton>
