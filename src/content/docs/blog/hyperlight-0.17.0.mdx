@@ -21,13 +21,12 @@ macOS support is however currently more limited than on our other platforms. On
 macOS we map multiple sandboxes to a single VM in the host process, swapping
 them out as needed. This means losing out on parallelism, and in turn results in
 worse performance than on our other targets. But on the upside it does mean we
-can support all Apple Silicon, including the M1 and M2 families of CPUs.
+can support even the oldest Apple Silicon CPUs (M1 + M2).
 
-We do plan to eventually optimize performance for the M3 and later family of
+We do plan to eventually optimize performance for the M3 and later families of
 CPUs, which should be able to achieve performance similar to our other supported
 platforms. But as a starting point we figured we should prioritize compatibility
-over performance, since macOS is usually used more for development than for
-deployment.
+over performance, since macOS is used more for development than for deployment.
 
 ## `SandboxBuilder` API
 
@@ -43,13 +42,12 @@ config.set_heap_size(256 * 1024);
 let guest = GuestBinary::FilePath(guest_path);
 let mut sandbox = UninitializedSandbox::new(guest, Some(config))?;
 sandbox.register("Add", |a: i32, b: i32| a + b)?;
-let sandbox: MultiUseSandbox = sandbox.evolve()?;
+let mut sandbox: MultiUseSandbox = sandbox.evolve()?;
 
 assert_eq!(sandbox.call("Add", (7, 8))?, 15);
 ```
 
-With the new builder API, all these steps are now part of a single chaining API,
-which is more ergonomic to use:
+With the new builder API, all these steps collapse into a single chained call:
 
 ```rust
 let mut sandbox = SandboxBuilder::from_file(guest_path)
