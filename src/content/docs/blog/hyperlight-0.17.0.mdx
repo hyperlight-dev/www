@@ -18,16 +18,16 @@ This makes macOS the third major platform for Hyperlight, following Linux and
 Windows. All Apple aarch64 CPUs are supported (Apple M1 and later).
 
 Hyperlight support for macOS is however currently more limited than for other
-platforms. The backend uses a single guest address space, making it less
-efficient than other platforms. We chose to do this because of hardware
-constraints in the M1 and M2 CPU families, and faster approaches would have
-prevented us from supporting these CPUs.
+platforms. On macOS we map multible sandboxes to a single VM in the host
+process, swapping them out as needed. This means losing out on parallelism and
+in turn worse performance than our other targets. But on the up side this does
+mean we can support all Apple Silicon CPUs including M1 and M2.
 
-We believe that for the time being this is the right approach for Apple
-hardware, as it’s mostly used for testing and local development. However we do
-plan to eventually optimize performance for the M3 and later family of CPUs,
-which should be able to achieve performance similar to our other supported
-platforms.
+We do plan to eventually optimize performance for the M3 and later family of
+CPUs, which should be able to achieve performance similar to our other supported
+platforms. But as a starting point we figured we should prioritize compatibility
+over performance, since macOS is usually used more for development than for
+deployment.
 
 ## `SandboxBuilder` API
 
@@ -64,19 +64,18 @@ assert_eq!(sandbox.call("Add", (7, 8)?, 15));
 
 The `hyperlight_component_macro` crate generates the glue between the Hyperlight
 guest and the host. In this release we've made some updates to that system, most
-notably that macros can now directly operate `.wit` files.
+notably: bindgen now makes it so guest calls on the host-side return `Result`.
+This makes it possible gracefully handle cases where something went wrong when
+calling in to the guest, where previously the host would panic.
 
-Doing this is as easy as pointing the `host_bindgen!` macro directly to a `.wit`
-file, which will then be parsed and expanded to a typed interface for the host:
+Hyperlight macros can now also directly operate on WIT IDL files. Doing this is as
+easy as pointing the `host_bindgen!` macro directly to a `.wit` file, which will
+then be parsed and expanded to a typed interface for the host:
 
 ```rust
 // A single WIT file
 hyperlight_component_macro::host_bindgen!(wit: "wit/world.wit");
 ```
-
-Finally: bindgen now makes it so guest calls on the host-side return `Result`.
-This makes it possible gracefully handle cases where something went wrong when
-calling in to the guest, where previously the host would panic.
 
 ## MSR Guest state no longer leaks between restore calls
 
