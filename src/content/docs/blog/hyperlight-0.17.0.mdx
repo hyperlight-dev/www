@@ -23,9 +23,9 @@ them out as needed. This means losing out on parallelism, and in turn results in
 worse performance than on our other targets. But on the upside it does mean we
 can support even the oldest Apple Silicon CPUs (M1 + M2).
 
-We do plan to eventually optimize performance for the M3 and later families of
-CPUs, which should be able to achieve performance similar to our other supported
-platforms. But as a starting point we figured we should prioritize compatibility
+We do plan to eventually optimize performance for Apple M3 and later, which
+should be able to achieve performance similar to our other supported platforms.
+But as a starting point we figured we should prioritize compatibility
 over performance, since macOS is used more for development than for deployment.
 
 ## `SandboxBuilder` API
@@ -47,7 +47,7 @@ let mut sandbox: MultiUseSandbox = sandbox.evolve()?;
 assert_eq!(sandbox.call("Add", (7, 8))?, 15);
 ```
 
-With the new builder API, all these steps collapse into a single chained call:
+With the new builder API, all these steps become a single chained call:
 
 ```rust
 let mut sandbox = SandboxBuilder::from_file(guest_path)
