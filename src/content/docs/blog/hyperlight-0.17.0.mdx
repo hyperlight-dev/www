@@ -15,13 +15,13 @@ improvements.
 
 Hyperlight now runs on Apple Silicon using Apple’s Hypervisor.framework API.
 This makes macOS the third major platform for Hyperlight, following Linux and
-Windows. All Apple aarch64 CPUs are supported (Apple M1 and later).
+Windows. All Apple Silicon CPU families are supported (M1 and later).
 
-Hyperlight support for macOS is however currently more limited than for other
-platforms. On macOS we map multible sandboxes to a single VM in the host
-process, swapping them out as needed. This means losing out on parallelism and
-in turn worse performance than our other targets. But on the up side this does
-mean we can support all Apple Silicon CPUs including M1 and M2.
+macOS support is however currently more limited than on our other platforms. On
+macOS we map multiple sandboxes to a single VM in the host process, swapping
+them out as needed. This means losing out on parallelism, and in turn results in
+worse performance than on our other targets. But on the upside it does mean we
+can support all Apple Silicon, including the M1 and M2 families of CPUs.
 
 We do plan to eventually optimize performance for the M3 and later family of
 CPUs, which should be able to achieve performance similar to our other supported
@@ -37,55 +37,56 @@ that to construct an `UninitializedSandbox`, and then calling the `evolve`
 method to obtain a final `MultiUseSandbox`:
 
 ```rust
-let mut config = SandboxConfiguration::default();  
-config.set_heap_size(256 * 1024);  
+let mut config = SandboxConfiguration::default();
+config.set_heap_size(256 * 1024);
 
 let guest = GuestBinary::FilePath(guest_path);
-let mut sandbox = UninitializedSandbox::new(guest, Some(config))?;  
-sandbox.register("Add", |a: i32, b: i32| a + b)?;  
+let mut sandbox = UninitializedSandbox::new(guest, Some(config))?;
+sandbox.register("Add", |a: i32, b: i32| a + b)?;
 let sandbox: MultiUseSandbox = sandbox.evolve()?;
 
-assert_eq!(sandbox.call("Add", (7, 8)?, 15));
+assert_eq!(sandbox.call("Add", (7, 8))?, 15);
 ```
 
 With the new builder API, all these steps are now part of a single chaining API,
 which is more ergonomic to use:
 
 ```rust
-let mut sandbox = SandboxBuilder::from_file(guest_path)  
+let mut sandbox = SandboxBuilder::from_file(guest_path)
     .heap_size(256 * 1024)
     .host_function("Add", |a: i32, b: i32| Ok(a + b))
-    .build()?;  
+    .build()?;
 
-assert_eq!(sandbox.call("Add", (7, 8)?, 15));
+assert_eq!(sandbox.call("Add", (7, 8))?, 15);
 ```
 
 ## Improvements to the component bindgen macro
 
 The `hyperlight_component_macro` crate generates the glue between the Hyperlight
 guest and the host. In this release we've made some updates to that system, most
-notably: bindgen now makes it so guest calls on the host-side return `Result`.
-This makes it possible gracefully handle cases where something went wrong when
-calling in to the guest, where previously the host would panic.
+notably: guest calls on the host side now return a `Result`. This makes it
+possible to gracefully handle cases where something went wrong while calling
+into the guest, where previously the host would panic.
 
-Hyperlight macros can now also directly operate on WIT IDL files. Doing this is as
-easy as pointing the `host_bindgen!` macro directly to a `.wit` file, which will
-then be parsed and expanded to a typed interface for the host:
+Hyperlight macros can now also operate directly on WIT IDL files. Doing this is
+as easy as pointing the `host_bindgen!` macro at a `.wit` file, which will then
+be parsed and expanded into a typed interface for the host:
 
 ```rust
 // A single WIT file
 hyperlight_component_macro::host_bindgen!(wit: "wit/world.wit");
 ```
 
-## MSR Guest state no longer leaks between restore calls
+## Guest MSR state no longer leaks between restore calls
 
-Model-Specific Register state used to be able to persist in guests between calls
-to `MultiUseSandbox::restore`. After almost a year of work, we have finally
-fixed this problem and guest MSR state now no longer leaks between restores.
+Model-Specific Register (MSR) state used to be able to persist in guests between
+calls to `MultiUseSandbox::restore`. After almost a year of work, we have
+finally fixed this problem, and guest MSR state no longer leaks between
+restores.
 
-Guest MSR state is now part the snapshot state instead, which can be declared
-up-front when constructing a sandbox. You can do this either
-by using `SandboxConfiguration::guest_msrs`, or with the newer
+Guest MSR state is now part of the snapshot state instead, which can be declared
+up-front when constructing a sandbox. You can do this either by using
+`SandboxConfiguration::guest_msrs`, or with the newer
 `SandboxBuilder::guest_msrs` API.
 
 ```rust
@@ -96,6 +97,6 @@ let mut sandbox = SandboxBuilder::from_file(guest_path)
 
 Read more about this in our docs: [MSR state across restore](https://github.com/hyperlight-dev/hyperlight/blob/944bb16ba855e9f723fab5e883f76d4ed73b5e33/docs/msr.md).
 
-## Other Changes
+## Other changes
 
 Check out everything that changed in [Hyperlight](https://github.com/hyperlight-dev/hyperlight/releases/tag/v0.17.0).
