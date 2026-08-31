@@ -1,0 +1,100 @@
+---
+title: "Announcing Hyperlight 0.17.0"
+date: 2026-08-31
+---
+
+_Hyperlight is a lightweight Virtual Machine Manager (VMM) designed to be
+embedded directly in applications. It enables safe execution of untrusted code
+with low latency and minimal overhead._
+
+Hyperlight 0.17.0 has been released! This release introduces macOS support for
+Hyperlight, a new `SandboxBuilder` API, better component bindgen, and security
+improvements.
+
+## macOS support for Hyperlight
+
+Hyperlight now runs on Apple Silicon using Apple’s Hypervisor.framework API.
+This makes macOS the third major platform for Hyperlight, following Linux and
+Windows. All Apple Silicon CPU families are supported (M1 and later).
+
+macOS support is however currently more limited than on our other platforms. On
+macOS we map multiple sandboxes to a single VM in the host process, swapping
+them out as needed. This means losing out on parallelism, and in turn results in
+worse performance than on our other targets. But on the upside it does mean we
+can support even the oldest Apple Silicon CPUs (M1 + M2).
+
+We do plan to eventually optimize performance for Apple M3 and later, which
+should be able to achieve performance similar to our other supported platforms.
+But as a starting point we figured we should prioritize compatibility
+over performance, since macOS is used more for development than for deployment.
+
+## `SandboxBuilder` API
+
+Constructing sandboxes is now more ergonomic thanks to the `SandboxBuilder` API.
+Setting up a sandbox used to require mutating a `SandboxConfiguration`, using
+that to construct an `UninitializedSandbox`, and then calling the `evolve`
+method to obtain a final `MultiUseSandbox`:
+
+```rust
+let mut config = SandboxConfiguration::default();
+config.set_heap_size(256 * 1024);
+
+let guest = GuestBinary::FilePath(guest_path);
+let mut sandbox = UninitializedSandbox::new(guest, Some(config))?;
+sandbox.register("Add", |a: i32, b: i32| a + b)?;
+let mut sandbox: MultiUseSandbox = sandbox.evolve()?;
+
+assert_eq!(sandbox.call("Add", (7, 8))?, 15);
+```
+
+With the new builder API, all these steps become a single chained call:
+
+```rust
+let mut sandbox = SandboxBuilder::from_file(guest_path)
+    .heap_size(256 * 1024)
+    .host_function("Add", |a: i32, b: i32| Ok(a + b))
+    .build()?;
+
+assert_eq!(sandbox.call("Add", (7, 8))?, 15);
+```
+
+## Improvements to the component bindgen macro
+
+The `hyperlight_component_macro` crate generates the glue between the Hyperlight
+guest and the host. In this release we've made some updates to that system, most
+notably: guest calls on the host side now return a `Result`. This makes it
+possible to gracefully handle cases where something went wrong while calling
+into the guest, where previously the host would panic.
+
+Hyperlight macros can now also operate directly on WIT IDL files. Doing this is
+as easy as pointing the `host_bindgen!` macro at a `.wit` file, which will then
+be parsed and expanded into a typed interface for the host:
+
+```rust
+// A single WIT file
+hyperlight_component_macro::host_bindgen!(wit: "wit/world.wit");
+```
+
+## Guest MSR state no longer leaks between restore calls
+
+Model-Specific Register (MSR) state used to be able to persist in guests between
+calls to `MultiUseSandbox::restore`. After almost a year of work, we have
+finally fixed this problem, and guest MSR state no longer leaks between
+restores.
+
+Guest MSR state is now part of the snapshot state instead, which can be declared
+up-front when constructing a sandbox. You can do this either by using
+`SandboxConfiguration::guest_msrs`, or with the newer
+`SandboxBuilder::guest_msrs` API.
+
+```rust
+let mut sandbox = SandboxBuilder::from_file(guest_path)
+    .guest_msrs(&[0x174, 0x175, 0x176])? // ← SYSENTER CS, ESP, EIP
+    .build()?;
+```
+
+Read more about this in our docs: [MSR state across restore](https://github.com/hyperlight-dev/hyperlight/blob/944bb16ba855e9f723fab5e883f76d4ed73b5e33/docs/msr.md).
+
+## Other changes
+
+Check out everything that changed in [Hyperlight](https://github.com/hyperlight-dev/hyperlight/releases/tag/v0.17.0).
