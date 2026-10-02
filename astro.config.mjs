@@ -5,6 +5,11 @@ import starlightBlog from 'starlight-blog';
 
 export default defineConfig({
 	site: 'https://hyperlight.org',
+	// Sites of other hyperlight-dev projects, which GitHub Pages serves from
+	// their own repositories under hyperlight-dev.github.io.
+	redirects: {
+		'/hluk': 'https://hyperlight-dev.github.io/hyperlight-unikraft/',
+	},
 	integrations: [
 		starlight({
 			title: 'Hyperlight',
