@@ -14,6 +14,18 @@ export default defineConfig({
 		starlight({
 			title: 'Hyperlight',
 			favicon: '/favicon.png',
+			customCss: ['./src/styles/custom.css'],
+			head: [
+				{ tag: 'link', attrs: { rel: 'preconnect', href: 'https://fonts.googleapis.com' } },
+				{ tag: 'link', attrs: { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: true } },
+				{
+					tag: 'link',
+					attrs: {
+						rel: 'stylesheet',
+						href: 'https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:ital,wght@0,400..900;1,400..900&family=JetBrains+Mono:wght@400;600&display=swap',
+					},
+				},
+			],
 			components: {
 				Footer: './src/components/HyperlightFooter.astro'
 			},
