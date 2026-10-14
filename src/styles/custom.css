@@ -1,0 +1,14 @@
+/* The type of the hyperlight-unikraft site (hyperlight.org/hluk), so the
+   two read as one site: Schibsted Grotesk for text, JetBrains Mono for
+   code. Colors stay Starlight's, which that site uses too. */
+:root {
+	--sl-font: 'Schibsted Grotesk';
+	--sl-font-mono: 'JetBrains Mono';
+}
+
+/* Headings set tight and heavy, as there. */
+#_top,
+.sl-markdown-content :is(h1, h2, h3) {
+	font-weight: 800;
+	letter-spacing: -0.025em;
+}
