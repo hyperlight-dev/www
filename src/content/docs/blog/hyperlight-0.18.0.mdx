@@ -1,0 +1,92 @@
+---
+title: "Announcing Hyperlight 0.18.0"
+date: 2026-10-14
+---
+
+_Hyperlight is a lightweight Virtual Machine Manager (VMM) designed to be embedded directly in applications. It enables safe execution of untrusted code with low latency and minimal overhead._
+
+Hyperlight 0.18.0 has been released! This release changes how the host and guest communicate, adds support for ARM64 Windows, application-specific snapshot metadata, portable exception handlers, and more. To view the full list of changes, please see the [_0.18.0 changelog_](https://github.com/hyperlight-dev/hyperlight/blob/main/CHANGELOG.md).
+
+## Ring-based communication between guests and hosts
+
+The guest and host in Hyperlight now communicate using two internal ring buffers, modeled after the [virtio virtqueue specification](https://docs.oasis-open.org/virtio/virtio/v1.3/csd01/virtio-v1.3-csd01.html#x1-720008). These ring buffers serves as the foundation for future improvements to Hyperlight, including non-blocking (async) RPC calls and streams.
+
+Hyperlight 0.18.0 does not change the user-facing API yet. Upgrading from 0.17.0 to 0.18.0 should be relatively straightforward for that reason. What is new however is that we're exposing controls to configure the queue sizes from both the guest→host, and host→guest.
+
+```rust
+let mut sandbox = SandboxBuilder::from_file(guest_path)
+    .g2h_queue_size(128)
+    .h2g_queue_size(64)
+    .build()?;
+```
+
+While these changes do not affect the public API, debug builds now do require more stack space in this release. We now reserve 48 KiB for the guest exception stack and its metadata, up from 8 KiB. We expect to optimize this and lower it again in a future release.
+
+This has by far been one of the biggest changes we've made to Hyperlight to date, and its importance cannot be overstated. Among other things this feature is what enables us to begin implementing WASI 0.3 support in hyperlight-wasm. You can read more about the design in [HIP 0001: Ring Buffer](https://github.com/hyperlight-dev/hyperlight/tree/v0.18.0/proposals/0001-rng-buf) and [Virtqueue communication](https://github.com/hyperlight-dev/hyperlight/blob/main/docs/virtio-host-guest-communication.md) guide in the docs.
+
+## ARM64 Windows support
+
+Hyperlight now supports ARM64 Windows through the Windows Hypervisor Platform (WHP) API. This is a continuation of the work we've done in Hyperlight 0.17.0, which added support for ARM64 on macOS.
+
+We want Hyperlight to work on as many platforms as possible, and supporting ARM64 Windows is in line with that. Though it may not be the most popular server platform, it is an increasingly popular consumer platform, and that too benefits from being able to run ultra-light sandboxes.
+
+## Restricted mode during snapshots
+
+When taking a snapshot the Hyperlight host will now enter the guest to allow it
+to prepare guest-internal structures for the snapshot. This was necessary to
+enable snapshots to work with the newly added ringbuffer APIs.
+
+When the host enters the guest during a snapshot, this is done in what we call
+“restricted mode”. During this mode the guest is not allowed to make any host
+calls. If the guest does attempt to call the host during this period, the
+snapshot failed and the sandbox is poisoned.
+
+## The `MultiUseSandbox` API is now the `Sandbox` API
+
+In the last release we introduced a new builder API by introducing a new [`SandboxBuilder`](https://docs.rs/hyperlight-host/0.17.0/hyperlight_host/sandbox/builder/struct.SandboxBuilder.html) API. In this release we're continuing our ergonomics improvements by renaming `MultiUseSandbox` to become `Sandbox`. That means that once you call `SandboxBuilder::build` you get an instance of `Sandbox`.
+
+To help users upgrade, we're keeping `MultiUseSandbox` as an alias for one release, after which we will be removing it and keeping `Sandbox` as the only API.
+
+```rust
+// before
+let sandbox: MultiUseSandbox = SandboxBuilder::from_file(...).build()?;
+
+// after
+let sandbox: Sandbox = SandboxBuilder::from_file(...).build()?;
+```
+
+## Attach application-specific metadata to snapshots
+
+Snapshots can now store additional app-specific metadata with namespaces. Adding metadata returns a new snapshot and leaves the original unchanged:
+
+```rust
+// Define metadata for the snapshot
+#[derive(Serialize, Deserialize)]
+struct SnapshotMetadata {
+    version: u32,
+}
+
+// Create a snapshot
+let snapshot = snapshot.with_metadata("my-app", &SnapshotMetadata { version: 1 })?;
+
+// Get the metadata from the snapshot
+let metadata = snapshot
+    .metadata::<SnapshotMetadata>("my-app")?
+    .expect("metadata should exist");
+```
+
+## Portable exception handlers
+
+Guests can now install portable exception handling hooks, deprecating the previous x64-specific `hyperlight_guest_bin::exception::arch` API. Exception handlers can be registered using the [`hyperlight_guest_bin::exception`](https://docs.rs/hyperlight-guest-bin/0.18.0/hyperlight_guest_bin/exception/) submodule. This currently exposes handlers for page faults and for undefined instructions, which we may extend with more handlers in the future.
+
+In Rust, handlers are encoded as `extern "C"` functions that are registered in the guest. When a fault occurs, this function is invoked so it can handle it. However it can't return, and must either `longjmp` or panic.
+
+```rust
+use hyperlight_guest_bin::exception::register_page_fault_handler;
+
+extern "C" fn on_page_fault(rip: u64, frame_pointer: u64, address: u64) -> ! {
+    panic!("page fault at {address:#x} (rip {rip:#x}, fp {frame_pointer:#x})");
+}
+
+register_page_fault_handler(on_page_fault);
+```
