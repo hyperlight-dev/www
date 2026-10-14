@@ -30,17 +30,6 @@ Hyperlight now supports ARM64 Windows through the Windows Hypervisor Platform (W
 
 We want Hyperlight to work on as many platforms as possible, and supporting ARM64 Windows is in line with that. Though it may not be the most popular server platform, it is an increasingly popular consumer platform, and that too benefits from being able to run ultra-light sandboxes.
 
-## Restricted mode during snapshots
-
-When taking a snapshot the Hyperlight host will now enter the guest to allow it
-to prepare guest-internal structures for the snapshot. This was necessary to
-enable snapshots to work with the newly added ringbuffer APIs.
-
-When the host enters the guest during a snapshot, this is done in what we call
-“restricted mode”. During this mode the guest is not allowed to make any host
-calls. If the guest does attempt to call the host during this period, the
-snapshot failed and the sandbox is poisoned.
-
 ## The `MultiUseSandbox` API is now the `Sandbox` API
 
 In the last release we introduced a new builder API by introducing a new [`SandboxBuilder`](https://docs.rs/hyperlight-host/0.17.0/hyperlight_host/sandbox/builder/struct.SandboxBuilder.html) API. In this release we're continuing our ergonomics improvements by renaming `MultiUseSandbox` to become `Sandbox`. That means that once you call `SandboxBuilder::build` you get an instance of `Sandbox`.
